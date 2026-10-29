@@ -870,7 +870,16 @@ create table orcamentos (
   data_coleta      timestamptz default now()
 );
 
-alter table orcamentos disable row level security;
+-- RLS ATIVO (o script original desativava; o banco real já está protegido):
+alter table orcamentos enable row level security;
+
+create policy "formulario_publico_insert"
+  on orcamentos for insert to anon
+  with check (true);
+
+create policy "fotos_insert_publico"
+  on storage.objects for insert to anon
+  with check (bucket_id = 'fotos-residuos');
 
 -- Storage: vá em Storage > New bucket
 -- Nome: fotos-residuos | Public: ON
@@ -878,24 +887,16 @@ alter table orcamentos disable row level security;
 =======================================================
 
 =======================================================
-  ENDURECIMENTO RECOMENDADO (revisar antes de executar)
+  ESTADO ATUAL DA SEGURANÇA (conferido em 29/10/2026)
 =======================================================
--- A chave anon fica visível no código da página. Com RLS desativado,
--- qualquer pessoa com essa chave pode LER, ALTERAR e APAGAR a tabela.
--- Antes de ativar, confirme quais outros sistemas leem 'orcamentos'
--- com a chave anon: eles passarão a precisar de login/política própria.
-
-alter table orcamentos enable row level security;
-
-create policy "anon insere orcamentos"
-  on orcamentos for insert to anon
-  with check (true);
-
--- Fotos: permitir apenas o upload (a leitura segue pelo link público)
-create policy "anon envia fotos"
-  on storage.objects for insert to anon
-  with check (bucket_id = 'fotos-residuos');
-
+-- RLS ativo em 'orcamentos', só com políticas de INSERT para a chave anon.
+-- O formulário consegue GRAVAR, mas a chave pública NÃO consegue ler,
+-- alterar nem apagar orçamentos. NUNCA execute 'disable row level security'
+-- nesta tabela.
+-- O bucket 'fotos-residuos' é público: quem tiver o link direto de uma
+-- foto a vê, mas não há listagem. Recomendado: definir no bucket um limite
+-- de tamanho (ex.: 5 MB) e os tipos permitidos (image/jpeg, image/png,
+-- image/webp, image/heic).
 =======================================================
 -->
 
